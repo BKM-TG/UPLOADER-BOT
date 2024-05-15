@@ -59,6 +59,8 @@ from tasks import (
     spdl_download_entrance,
 )
 from utils import auto_restart, clean_tempfile, customize_logger, get_revision
+from web import web_server 
+from aiohttp import web
 
 logging.info("Authorized users are %s", AUTHORIZED_USER)
 customize_logger(["pyrogram.client", "pyrogram.session.session", "pyrogram.connection.connection"])
@@ -643,18 +645,12 @@ if __name__ == "__main__":
     scheduler.add_job(clean_tempfile, "interval", seconds=120)
     scheduler.add_job(Redis().reset_today, "cron", hour=0, minute=0)
     scheduler.add_job(InfluxDB().collect_data, "interval", seconds=120)
-    # scheduler.add_job(TronTrx().check_payment, "interval", seconds=60, max_instances=1)
-    #  default quota allocation of 10,000 units per day
-    # scheduler.add_job(periodic_sub_check, "interval", seconds=3600)
+    scheduler.add_job(TronTrx().check_payment, "interval", seconds=60, max_instances=1) #default quota allocation of 10,000 units per day
+    scheduler.add_job(periodic_sub_check, "interval", seconds=3600)
     scheduler.start()
-    banner = f"""
-▌ ▌         ▀▛▘     ▌       ▛▀▖              ▜            ▌
-▝▞  ▞▀▖ ▌ ▌  ▌  ▌ ▌ ▛▀▖ ▞▀▖ ▌ ▌ ▞▀▖ ▌  ▌ ▛▀▖ ▐  ▞▀▖ ▝▀▖ ▞▀▌
- ▌  ▌ ▌ ▌ ▌  ▌  ▌ ▌ ▌ ▌ ▛▀  ▌ ▌ ▌ ▌ ▐▐▐  ▌ ▌ ▐  ▌ ▌ ▞▀▌ ▌ ▌
- ▘  ▝▀  ▝▀▘  ▘  ▝▀▘ ▀▀  ▝▀▘ ▀▀  ▝▀   ▘▘  ▘ ▘  ▘ ▝▀  ▝▀▘ ▝▀▘
-
-By @BennyThink, VIP mode: {ENABLE_VIP}, Celery Mode: {ENABLE_CELERY}
-Version: {get_revision()}
-    """
+    app = web.AppRunner(await web_server())
+    await app.setup()
+    await web.TCPSite(app, "0.0.0.0", 8080).start()
+    banner = f"""By @DARKL0RD_99, VIP mode: {ENABLE_VIP}, Celery Mode: {ENABLE_CELERY} Version: {get_revision()}"""
     print(banner)
     app.run()
